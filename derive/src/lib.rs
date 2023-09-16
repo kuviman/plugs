@@ -39,6 +39,7 @@ impl DeriveInput {
         let data = data.take_struct().unwrap();
         let mut plug_list = quote!(#plugs::frunk::hlist::HNil);
         let mut field_initializers = Vec::new();
+        let mut field_refs = Vec::new();
         for (index, field) in data.iter().enumerate() {
             let field_ident = match &field.ident {
                 Some(ident) => quote!(#ident),
@@ -51,7 +52,13 @@ impl DeriveInput {
             if field.other {
                 let other_plug_list = quote!(<#field_ty as #plugs::Bundle>::PlugList<'a>);
                 plug_list = quote!(#plugs::frunk::hlist::HCons<#other_plug_list, #plug_list>);
+                field_refs.push(
+                    quote!(let refs = refs.prepend(#plugs::Bundle::refs(&self.#field_ident));),
+                );
                 plug_list = quote!(<#plug_list as std::ops::Add<#other_plug_list>>::Output);
+                field_refs.push(
+                    quote!(let refs = refs.extend(#plugs::Bundle::refs(&self.#field_ident));),
+                );
                 field_initializers.push(
                     quote!(#field_ident: <#field_ty as #plugs::Bundle>::from_refs(refs.pluck().0)),
                 );
@@ -59,6 +66,7 @@ impl DeriveInput {
                 plug_list = quote!(#plugs::frunk::hlist::HCons<&'a #field_ty, #plug_list>);
                 field_initializers
                     .push(quote!(#field_ident: (#plugs::Plug::clone(refs.get::<&#field_ty, _>()))));
+                field_refs.push(quote!(let refs = refs.prepend(&self.#field_ident);));
             }
         }
         quote! {
@@ -70,10 +78,9 @@ impl DeriveInput {
                     }
                 }
                 fn refs(&self) -> Self::PlugList<'_> {
-                    // #plugs::frunk::hlist![
-                    //     #(&self.#field_idents,)*
-                    // ]
-                    todo!()
+                    let refs = #plugs::frunk::hlist::HNil;
+                    #(#field_refs)*
+                    refs
                 }
             }
         }

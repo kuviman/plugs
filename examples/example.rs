@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use plugs::Plug;
 
 #[derive(plugs::Bundle)]
