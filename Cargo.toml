@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "plugs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+frunk = "0.4.2"
+plugs-derive.path = "derive"
